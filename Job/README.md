@@ -9,27 +9,33 @@ Built solo. React Native/Expo on the frontend, FastAPI and PostgreSQL on the bac
 ## Screenshots
 
 ### Home
-![Home](screenshots/01-home.png)
+<img src="screenshots/01-home.png" width="280">
+
 The main dashboard. Shows today's application count, response rate, and a rotating "companion" card that reacts to whatever happened most recently in your inbox (a rejection, an interview invite, etc). This is the first thing you see, so it's designed to answer "where do I actually stand right now" in one glance, without needing to dig through a list.
 
 ### Applications list
-![Applications](screenshots/02-applications-list.png)
+<img src="screenshots/02-applications-list.png" width="280">
+
 Every tracked application in one scrollable list, each with its current status (Applied, Interview, Assessment, Offer, Rejected). This is the core of what the app replaces: a manually updated spreadsheet. Every entry here got there automatically from a Gmail sync, not a manual add.
 
 ### Application detail
-![Detail](screenshots/03-application-detail.png)
+<img src="screenshots/03-application-detail.png" width="280">
+
 A single application's full timeline: when you applied, every status change since, and the underlying email history that led to each change. This solves a specific problem I had myself: once you've applied to 50+ places, you forget the details of any one of them by the time something happens. This screen exists so you never have to reconstruct that context from memory.
 
 ### Insights
-![Insights](screenshots/04-insights.png)
+<img src="screenshots/04-insights.png" width="280">
+
 Aggregate stats across your whole search: response rate, best/worst days to apply, which roles are actually converting versus which ones you're applying to most. This is the difference between a tracker and something that actually helps you improve your approach. A spreadsheet tells you what happened. This tells you what's working.
 
 ### AI companion
-![Companion](screenshots/05-job-ai.png)
+<img src="screenshots/05-job-ai.png" width="280">
+
 A chat interface with access to your actual application data, not generic career advice. You can ask it things like "why am I not getting interviews" and it answers using your real response rate, role performance, and history, not a canned response.
 
 ### Weekly review
-![Weekly review](screenshots/06-weekly-review.png)
+<img src="screenshots/06-weekly-review.png" width="280">
+
 A weekly summary: applications sent, responses received, and an honest note about momentum (if your volume dropped compared to the week before, it says so). This exists because job searching is a long, low-feedback process, and it's easy to lose track of whether you're actually keeping pace week to week.
 
 ## The interesting part: how it reads your inbox
@@ -44,7 +50,9 @@ I built it differently. Before anything touches a model, most emails get resolve
 
 3. **Claude only gets called when the rule engine genuinely can't decide.** If confidence doesn't clear a threshold, the email goes to the model with the thread history as context. Most emails never reach this step at all.
 
-See `docs/classifier-pipeline.png` for the full flow, including the entity-matching cascade and the business rules that come after classification.
+<img src="screenshots/10-classifier-pipeline.png" width="700">
+
+The diagram above shows the full flow, including the entity-matching cascade and the business rules that come after classification.
 
 Why this matters more to me than it might sound: it's the part of the project where I actually had to think, not just wire an API together. Deciding when a model is worth calling, and building something reliable enough that it usually doesn't need to be, was the real engineering problem.
 
