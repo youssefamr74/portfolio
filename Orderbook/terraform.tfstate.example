@@ -1,0 +1,114 @@
+{
+  "_comment": "FICTITIOUS EXAMPLE FILE — hand-written for the portfolio, not a real Terraform state dump. Every ID, ARN, and IP address below is made up (IPs use the 203.0.113.0/24 range reserved by RFC 5737 for documentation, precisely so they can't resolve to anything real). The real Orderbook/terraform/terraform.tfstate currently has an empty resources list (nothing is provisioned right now), so there was no real deployed data to redact — this file exists purely to show the shape of what Terraform would track for the resources defined in terraform/main.tf.",
+  "version": 4,
+  "terraform_version": "1.14.6",
+  "serial": 1,
+  "lineage": "00000000-0000-0000-0000-000000000000",
+  "outputs": {
+    "server_public_ip": {
+      "value": "203.0.113.10",
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "aws_iam_role",
+      "name": "ec2_ecr_role",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "attributes": {
+            "name": "orderbook-ec2-ecr-role",
+            "arn": "arn:aws:iam::123456789012:role/orderbook-ec2-ecr-role"
+          }
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_instance_profile",
+      "name": "ec2_profile",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "attributes": {
+            "name": "orderbook-ec2-profile",
+            "arn": "arn:aws:iam::123456789012:instance-profile/orderbook-ec2-profile"
+          }
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "sg",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "attributes": {
+            "name": "orderbook-sg",
+            "id": "sg-00000000000000000",
+            "vpc_id": "vpc-00000000000000000",
+            "ingress": [
+              { "from_port": 22, "to_port": 22, "protocol": "tcp", "cidr_blocks": ["0.0.0.0/0"] },
+              { "from_port": 80, "to_port": 80, "protocol": "tcp", "cidr_blocks": ["0.0.0.0/0"] },
+              { "from_port": 8080, "to_port": 8080, "protocol": "tcp", "cidr_blocks": ["0.0.0.0/0"] }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "app_server",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "attributes": {
+            "id": "i-00000000000000000",
+            "ami": "ami-0c7217cdde317cfec",
+            "instance_type": "t3.small",
+            "key_name": "orderbook-key",
+            "public_ip": "203.0.113.10",
+            "tags": { "Name": "Orderbook-Production" }
+          }
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_ecr_repository",
+      "name": "repos",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": "auth",
+          "attributes": { "name": "orderbook-auth", "repository_url": "123456789012.dkr.ecr.us-east-1.amazonaws.com/orderbook-auth" }
+        },
+        {
+          "index_key": "engine",
+          "attributes": { "name": "orderbook-engine", "repository_url": "123456789012.dkr.ecr.us-east-1.amazonaws.com/orderbook-engine" }
+        },
+        {
+          "index_key": "orders",
+          "attributes": { "name": "orderbook-orders", "repository_url": "123456789012.dkr.ecr.us-east-1.amazonaws.com/orderbook-orders" }
+        },
+        {
+          "index_key": "trades",
+          "attributes": { "name": "orderbook-trades", "repository_url": "123456789012.dkr.ecr.us-east-1.amazonaws.com/orderbook-trades" }
+        },
+        {
+          "index_key": "gateway",
+          "attributes": { "name": "orderbook-gateway", "repository_url": "123456789012.dkr.ecr.us-east-1.amazonaws.com/orderbook-gateway" }
+        },
+        {
+          "index_key": "frontend",
+          "attributes": { "name": "orderbook-frontend", "repository_url": "123456789012.dkr.ecr.us-east-1.amazonaws.com/orderbook-frontend" }
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}
