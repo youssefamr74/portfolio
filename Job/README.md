@@ -1,137 +1,81 @@
-# Jōb — AI-Assisted Job Application Tracker
+# Jōb
 
-> Portfolio notes for `job-backend` + `job-mobile`. Source of truth is the actual code in
-> `Documents/Job/job-backend` and `Documents/Job/job-mobile` — this README describes what's
-> there today, not an aspirational feature list.
+A job search companion app. It reads your Gmail, figures out what happened with each application, and tracks everything automatically instead of you updating a spreadsheet by hand.
 
-## What it does
+Live on Google Play: play.google.com/store/apps/details?id=com.youssefibrahim.job
 
-Jōb tracks a job search automatically instead of making you maintain a spreadsheet. The core
-loop:
+Built solo. React Native/Expo on the frontend, FastAPI and PostgreSQL on the backend, Anthropic's Claude API doing the classification work.
 
-1. The user connects their Gmail account (Google OAuth).
-2. The backend periodically pulls recent messages via the Gmail API (`gmail/gmail_client.py`,
-   `gmail/service.py`) and runs them through a two-stage classifier:
-   - **Stage 1 — cheap heuristic filter** (`classifier/heuristics.py`, `quick_filter`) throws
-     out obvious non-job emails without ever calling an LLM.
-   - **Stage 2 — Claude Haiku** (`classifier/service.py`) classifies anything that survives
-     stage 1: is this job-related, what's the company/role, has the status changed (Applied →
-     In Review → Interview → Offer/Rejected)?
-3. `applications/sync_service.py` takes the classified emails, de-duplicates/matches them
-   against existing applications (by thread ID, job ID, or a fingerprint of company+role), applies
-   status-transition rules, and persists everything.
-4. The mobile app (React Native/Expo) surfaces the results: an application list with live
-   status, an analytics/insights screen, weekly-review summaries, a goals/streak tracker, and a
-   "companion" feature that generates short AI-written reactions to status changes ("Offer from
-   {company} 🎉") with a scripted fallback if Claude fails or times out.
-5. CV upload/parsing (`cv/`) and a support/contact flow (`support/`) round out the app. Payments
-   (Pro tier) go through RevenueCat, with a webhook endpoint on the backend.
+## Screenshots
 
-This is not a toy CRUD app — it has background jobs (`APScheduler` for daily notification
-checks), two-stage AI classification with real failure handling (rate limits, timeouts, bad
-JSON from the model all degrade gracefully instead of crashing the sync), and an actual
-`tests/` suite (`pytest`) plus Alembic migrations.
+### Home
+![Home](screenshots/01-home.png)
+The main dashboard. Shows today's application count, response rate, and a rotating "companion" card that reacts to whatever happened most recently in your inbox (a rejection, an interview invite, etc). This is the first thing you see, so it's designed to answer "where do I actually stand right now" in one glance, without needing to dig through a list.
 
-## Tech stack
+### Applications list
+![Applications](screenshots/02-applications-list.png)
+Every tracked application in one scrollable list, each with its current status (Applied, Interview, Assessment, Offer, Rejected). This is the core of what the app replaces: a manually updated spreadsheet. Every entry here got there automatically from a Gmail sync, not a manual add.
 
-**Backend** (`job-backend/`)
-- FastAPI + Uvicorn, SQLAlchemy 2.0 (async) + `asyncpg`, Alembic migrations
-- Postgres via Supabase (also used for auth — Supabase JWT verification)
-- Anthropic Claude (Haiku) for email classification and companion-message generation
-- Google OAuth + Gmail API for the mailbox sync
-- APScheduler for the daily notification job
-- pytest for the test suite
+### Application detail
+![Detail](screenshots/03-application-detail.png)
+A single application's full timeline: when you applied, every status change since, and the underlying email history that led to each change. This solves a specific problem I had myself: once you've applied to 50+ places, you forget the details of any one of them by the time something happens. This screen exists so you never have to reconstruct that context from memory.
 
-**Mobile** (`job-mobile/`)
-- React Native + Expo (SDK ~54), React Navigation (stack + bottom tabs)
-- `axios` API client with auth-token interceptor and automatic 401 refresh-and-retry
-- `react-native-purchases` (RevenueCat) for subscriptions
-- `expo-notifications` for push, `expo-document-picker` for CV upload
-- Google Sign-In (`@react-native-google-signin/google-signin`)
+### Insights
+![Insights](screenshots/04-insights.png)
+Aggregate stats across your whole search: response rate, best/worst days to apply, which roles are actually converting versus which ones you're applying to most. This is the difference between a tracker and something that actually helps you improve your approach. A spreadsheet tells you what happened. This tells you what's working.
 
-## Architecture
+### AI companion
+![Companion](screenshots/05-job-ai.png)
+A chat interface with access to your actual application data, not generic career advice. You can ask it things like "why am I not getting interviews" and it answers using your real response rate, role performance, and history, not a canned response.
 
-```
-                        ┌───────────────────────────┐
-                        │   Gmail API (user's inbox) │
-                        └─────────────┬─────────────┘
-                                      │ OAuth token
-                                      ▼
-┌────────────────┐   HTTPS/JSON  ┌──────────────────────────────┐
-│   job-mobile     │◄────────────►│         job-backend           │
-│  (Expo / RN)     │   REST API   │        (FastAPI, async)       │
-│                  │              │                                │
-│ - Applications   │              │  auth · applications · gmail   │
-│ - Insights       │              │  classifier · companion        │
-│ - Goals          │              │  cv · goals · notifications    │
-│ - Companion/AI   │              │  analytics · support · webhooks│
-│ - CV upload      │              │                                │
-└───────┬──────────┘              └───────┬───────────┬───────────┘
-        │                                 │           │
-        │ push notifications              │           │
-        ▼                                 ▼           ▼
-┌────────────────┐            ┌────────────────┐  ┌───────────────────┐
-│ Expo Push /     │            │ Postgres        │  │ Anthropic Claude   │
-│ RevenueCat      │            │ (via Supabase)  │  │ (Haiku) — email    │
-│ (subscriptions) │            │ - users         │  │ classification +   │
-└────────────────┘            │ - applications  │  │ companion messages │
-                                │ - goals/streaks │  └───────────────────┘
-                                └────────────────┘
-```
+### Weekly review
+![Weekly review](screenshots/06-weekly-review.png)
+A weekly summary: applications sent, responses received, and an honest note about momentum (if your volume dropped compared to the week before, it says so). This exists because job searching is a long, low-feedback process, and it's easy to lose track of whether you're actually keeping pace week to week.
 
-The backend is a single FastAPI service organized by domain module (not microservices) —
-`auth/`, `applications/`, `gmail/`, `classifier/`, `companion/`, `cv/`, `goals/`,
-`notifications/`, `analytics/`, `support/`, `webhooks/`, each with its own `routes.py` /
-`service.py` / `models.py`. Deployed on Railway.
+## The interesting part: how it reads your inbox
 
-## Interesting technical decisions worth calling out
+Most tools like this would throw every email at an LLM and let it sort things out. That's slow, it's expensive at any real scale, and it doesn't actually prove you understand the problem you're solving.
 
-- **Two-stage classification pipeline.** Every synced email goes through a free/local
-  heuristic filter *before* it's allowed to hit the Claude API. This keeps classification
-  cost roughly proportional to "emails that actually look job-related," not "every email in
-  the inbox."
-- **Graceful AI degradation.** `classifier/service.py` explicitly catches
-  `RateLimitError`, `APITimeoutError`, `APIConnectionError`, and generic `APIError` from the
-  Anthropic SDK and just skips that email rather than failing the whole sync. `companion/service.py`
-  ships hand-written `FALLBACK_MOMENTS` copy for when Claude fails to produce usable output —
-  the feature degrades to static (but still on-brand) text instead of breaking.
-- **Idempotent Gmail sync with multi-key matching.** `sync_service.py` matches incoming
-  emails against existing application records by thread ID, job ID, *and* a
-  company+role fingerprint (`classifier/normalization.make_fingerprint`) so the same
-  application doesn't get duplicated when Gmail threads split or a recruiter emails from a new
-  thread.
-- **401-aware API client.** The mobile `services/api.js` axios instance queues concurrent
-  requests during a token refresh and replays them afterward, instead of firing N parallel
-  refresh calls when several screens hit the API at once.
+I built it differently. Before anything touches a model, most emails get resolved by a layered, deterministic system:
+
+1. **A cheap filter kills the obvious noise first.** Newsletters, spam, anything clearly unrelated to a job application never gets any further processing. This costs nothing and runs instantly.
+
+2. **A rule engine handles the majority of what's left.** I wrote pattern-matching logic for 12+ ATS platforms (Greenhouse, Lever, Workday, SmartRecruiters, and others), extracting company, role, and status from how each platform actually structures its emails. Status detection uses multilingual regex, since rejection and interview language doesn't only show up in English. Every extraction gets a confidence score, weighted across company, role, status, and completeness. There's also a template cache so a recurring email format from the same ATS gets classified instantly on repeat.
+
+3. **Claude only gets called when the rule engine genuinely can't decide.** If confidence doesn't clear a threshold, the email goes to the model with the thread history as context. Most emails never reach this step at all.
+
+See `docs/classifier-pipeline.png` for the full flow, including the entity-matching cascade and the business rules that come after classification.
+
+Why this matters more to me than it might sound: it's the part of the project where I actually had to think, not just wire an API together. Deciding when a model is worth calling, and building something reliable enough that it usually doesn't need to be, was the real engineering problem.
+
+## What else is in there
+
+- **Automated tracking.** Applications get logged, matched, and updated without manual entry, using a matching cascade (thread ID, then job ID, then a company+role+date fingerprint, then a recency-based company match) so the same application doesn't get duplicated across a long email thread.
+- **Status protection.** Once something is marked Rejected or Offer, the system won't silently flip it back on a low-confidence re-read. If it's going to affect how someone feels about their own job search, it has to be right.
+- **Interview prep and a companion chat** that has access to your actual application data, not generic advice.
+
+None of this was a spec I was handed. I built it because I was job hunting myself and got tired of an inbox that told me nothing back.
+
+## Stack
+
+- **Mobile:** React Native, Expo
+- **Backend:** FastAPI, PostgreSQL, async SQLAlchemy
+- **AI:** Anthropic API (Claude Haiku for classification and coaching)
+- **Auth:** Google OAuth, Gmail API integration
+- **Infra:** Railway, GitHub Actions
 
 ## Running it locally
 
-**Backend**
-```bash
-cd job-backend
-python -m venv venv && source venv/bin/activate   # or venv\Scripts\activate on Windows
+See `.env.example` for the required environment variables (Gmail OAuth credentials, Anthropic API key, database URL). Real credentials are not included in this repo.
+
+\`\`\`
+# backend
+cd backend
 pip install -r requirements.txt
-cp .env.example .env   # fill in real values — see this folder's job-backend.env.example
-alembic upgrade head
 uvicorn main:app --reload
-```
 
-**Mobile**
-```bash
-cd job-mobile
+# mobile
+cd mobile
 npm install
-cp .env.example .env   # fill in real values — see this folder's job-mobile.env.example
 npx expo start
-```
-
-The mobile app's `services/api.js` currently points `baseURL` at the deployed Railway
-instance — for fully local development, point it at your local backend
-(`http://localhost:8000`) instead.
-
-## Configuration
-
-See `job-backend.env.example` and `job-mobile.env.example` in this folder for every
-environment variable the two apps actually read (names taken straight from
-`job-backend/config.py` and the real `.env` files), with placeholder values only. The real
-`.env` files (with live Supabase/Anthropic/Google/RevenueCat credentials) were **not** copied
-into this portfolio folder.
+\`\`\`
