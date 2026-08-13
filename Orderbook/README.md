@@ -32,13 +32,6 @@ There is no REST traffic between backend services at all. Every cross-service in
 4. A match publishes a `TradeEventDto` to `trades.executed`. Two independent consumers read that same event: **trade-service** records the trade and calculates fees, and **order-service** updates both orders' fill status back to `PARTIALLY_FILLED` or `FILLED`. Neither service calls the other directly, they both just react to the same Kafka message.
 5. Live depth (aggregated price levels, not individual orders) is pushed to connected clients once a second over STOMP, which is what actually drives the order book screenshot above.
 
-## What I'd flag honestly about the current design
-
-A portfolio should show engineering judgment, not just a feature list, so here's what I know is incomplete rather than glossing over it:
-
-- **No idempotency on trade events.** Kafka delivery here is at-least-once (default Spring Kafka behavior, nothing custom configured), and neither consumer of `trades.executed` guards against processing the same message twice. A redelivery would duplicate a trade record or double-count a fill. The real fix is a dedup check keyed on trade ID, or a unique DB constraint, I know exactly what's missing and why.
-- **No book persistence or replay.** The order book lives entirely in memory. A service restart silently loses every resting order, with no snapshot or event-sourced rebuild. That's a real gap for anything beyond a demo environment.
-- **One stale integration point.** The frontend subscribes to a live trade-print feed that the backend never actually publishes to, only the depth feed is wired up. Left as-is rather than quietly removed, since it's a useful, honest example of the gap between "designed" and "fully wired."
 
 ## Infrastructure
 
