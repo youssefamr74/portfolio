@@ -1,6 +1,5 @@
 # Topuzz
 
-*A portfolio overview of a production app. This is a showcase of the concept, architecture, and engineering decisions, not setup documentation, since the app has paid Pro features and the source lives in a private repository.*
 
 A mobile jigsaw puzzle app. Puzzles up to 5,000 pieces, real-time collaborative solving with friends, and a custom-built rendering engine underneath, since nothing off the shelf could handle a jigsaw board at that scale smoothly.
 
