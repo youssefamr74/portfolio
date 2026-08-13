@@ -1,7 +1,5 @@
 # Jōb
 
-*A portfolio overview of a production app. This is a showcase of the concept, architecture, and engineering decisions, not setup documentation, since the app has paid Pro features and the source lives in a private repository.*
-
 A job search companion app. It reads your Gmail, figures out what happened with each application, and tracks everything automatically instead of you updating a spreadsheet by hand.
 
 Live on Google Play: play.google.com/store/apps/details?id=com.youssefibrahim.job
